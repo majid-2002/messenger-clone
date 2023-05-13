@@ -11,10 +11,8 @@ import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 
-
 //? variant type
 type Variant = "LOGIN" | "REGISTER";
-
 
 //? AuthForm
 const AuthForm = () => {
@@ -34,7 +32,7 @@ const AuthForm = () => {
     variant === "LOGIN" ? setVariant("REGISTER") : setVariant("LOGIN");
   }, [variant]);
 
-  //? react-hook-form for handling form 
+  //? react-hook-form for handling form
   const {
     register,
     handleSubmit,
@@ -55,6 +53,7 @@ const AuthForm = () => {
     if (variant === "REGISTER") {
       axios
         .post("/api/register", data)
+        .then(() => signIn("credentials", data))
         .catch(() => {
           toast.error("Something went wrong");
         })
@@ -62,7 +61,6 @@ const AuthForm = () => {
           setIsLoading(false);
         });
     }
-
 
     //? if LOGIN validate the credentials using signIn from next-auth
     if (variant === "LOGIN") {
@@ -75,14 +73,16 @@ const AuthForm = () => {
             toast.error("Invalid credentials");
           }
 
-          if (callback?.ok && !callback?.error) toast.success("Logged in!");
+          if (callback?.ok && !callback?.error) {
+            toast.success("Logged in!");
+            router.push("/users");
+          }
         })
         .finally(() => {
           setIsLoading(false);
         });
     }
   };
-
 
   //? handling social login Github, Google
   const socialAction = (action: string) => {
@@ -188,11 +188,9 @@ const AuthForm = () => {
                 : "Already have an account?"}
             </div>
 
-
             <div onClick={toggleVariant} className="underline cursor-pointer">
               {variant === "LOGIN" ? "Create an account" : "Login"}
             </div>
-
           </div>
         </div>
       </div>
