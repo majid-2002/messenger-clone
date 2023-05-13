@@ -1,25 +1,40 @@
 "use client";
 
 import Button from "@/app/components/Button";
-import AuthSocialButton from "./AuthSocialButton";
 import Input from "@/app/components/inputs/Input";
-import { useCallback, useState } from "react";
+import AuthSocialButton from "./AuthSocialButton";
+import { useCallback, useEffect, useState } from "react";
 import { useForm, FieldValues, SubmitHandler } from "react-hook-form";
 import { BsGithub, BsGoogle } from "react-icons/bs";
-import axios from "axios";
 import { toast } from "react-hot-toast";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import axios from "axios";
 
+
+//? variant type
 type Variant = "LOGIN" | "REGISTER";
 
+
+//? AuthForm
 const AuthForm = () => {
+  const session = useSession();
   const [variant, setVariant] = useState<Variant>("LOGIN");
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
+  useEffect(() => {
+    if (session?.status === "authenticated") {
+      router.push("/users");
+    }
+  }, [session?.status, router]);
+
+  //? Variant toggle
   const toggleVariant = useCallback(() => {
     variant === "LOGIN" ? setVariant("REGISTER") : setVariant("LOGIN");
   }, [variant]);
 
+  //? react-hook-form for handling form 
   const {
     register,
     handleSubmit,
@@ -32,8 +47,11 @@ const AuthForm = () => {
     },
   });
 
+  //? Onsubmit handler
   const onSubmit: SubmitHandler<FieldValues> = (data) => {
     setIsLoading(true);
+
+    //? if register call the register api
     if (variant === "REGISTER") {
       axios
         .post("/api/register", data)
@@ -45,6 +63,8 @@ const AuthForm = () => {
         });
     }
 
+
+    //? if LOGIN validate the credentials using signIn from next-auth
     if (variant === "LOGIN") {
       signIn("credentials", {
         ...data,
@@ -63,9 +83,24 @@ const AuthForm = () => {
     }
   };
 
+
+  //? handling social login Github, Google
   const socialAction = (action: string) => {
     setIsLoading(true);
-    // NextAuth social signin
+
+    signIn(action, {
+      redirect: false,
+    })
+      .then((callback) => {
+        if (callback?.error) {
+          toast.error("Invalid credentials");
+        }
+
+        if (callback?.ok && !callback?.error) toast.success("Logged in!");
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   };
 
   return (
@@ -152,9 +187,12 @@ const AuthForm = () => {
                 ? "New to Messenger?"
                 : "Already have an account?"}
             </div>
+
+
             <div onClick={toggleVariant} className="underline cursor-pointer">
               {variant === "LOGIN" ? "Create an account" : "Login"}
             </div>
+
           </div>
         </div>
       </div>
